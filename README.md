@@ -56,7 +56,8 @@ with simulated latency. The backend must implement the endpoints in `docs/API.md
 | Charts     | Recharts                                                      |
 | Icons      | Lucide                                                        |
 | Backend    | Django 5 + DRF + SimpleJWT + PostgreSQL 16 + pgvector + Celery + Redis |
-| Hosting    | Cloudflare Pages or GitHub Pages (free HTTPS)                 |
+| CI         | GitHub Actions (tests + builds only — no deployment)          |
+| Hosting (intended) | Cloudflare Pages (frontend) · Render (backend/Celery/Valkey) · Supabase (PostgreSQL + pgvector) |
 
 ## 📁 Project structure
 
@@ -84,8 +85,8 @@ SmartCorpAI/
 │   ├── requirements.txt  Dockerfile  .env.example
 │   └── manage.py
 ├── docker-compose.yml  # frontend + backend + postgres(pgvector) + redis + celery
-├── .github/workflows/deploy-pages.yml  # build + deploy frontend to GitHub Pages
-├── docs/CLOUDFLARE.md  # permanent HTTPS: the one manual step
+├── .github/workflows/ci.yml  # CI: backend tests (pgvector service) + frontend production build
+├── docs/CLOUDFLARE.md  # intended frontend hosting: Cloudflare Pages setup
 └── README.md
 ```
 
@@ -221,26 +222,35 @@ and allowed knowledge bases. Frontend already models this (`routeQuery()` in
 - Coming with RAG: retrieval/citation/router/approval tests + the full
   login → upload → process → ask → cite → audit path.
 
-## 🌐 Deployment
+## 🌐 CI & Deployment
 
-**Live preview (now):** the dev server exposes free HTTPS for review during development.
+**GitHub Actions = CI only.** `.github/workflows/ci.yml` runs on every push/PR:
 
-**Cloudflare Pages is preferred — see `docs/CLOUDFLARE.md` for the exact one-step setup.**
+- **Backend job** — PostgreSQL 16 + pgvector service container, `manage.py check`,
+  `makemigrations --check`, and the full test suite.
+- **Frontend job** — `npm ci` + production build (`tsc --noEmit && vite build`) with
+  `VITE_USE_MOCK=false` and `VITE_API_URL=/api` (real-API configuration).
 
-**GitHub Pages (free HTTPS, auto-deploy)** is pre-wired as the fallback:
-a workflow (`.github/workflows/deploy-pages.yml`) builds `frontend/` and deploys `dist/`
-on every push to `main`.
-One-time setup (requires repo admin — the automation token cannot do this step):
+**GitHub Pages is intentionally unused.** There is no Pages deployment workflow and none
+should be added; the former `deploy-pages.yml` was removed on purpose.
 
-1. GitHub → repository **Settings → Pages → Build and deployment → Source: GitHub Actions**
-2. Push/merge to `main` → live at `https://<owner>.github.io/SmartCorpAI/`
+**Intended hosting architecture (not yet deployed):**
 
-**Cloudflare Pages (preferred free HTTPS):**
+```
+GitHub            → GitHub Actions: CI (tests + builds only)
+Supabase          → PostgreSQL + pgvector
+Render            → Django backend · Celery worker · Valkey/Redis
+Cloudflare Pages  → React frontend
+```
 
-1. Cloudflare Dashboard → Pages → Connect repo `SmartCorpAI`
-2. Root directory `frontend` · build `npm run build` · output `dist`
-3. `public/_redirects` already provides SPA fallback → `https://smartcorp-ai.pages.dev`
-   (or nearest available name). Every push auto-redeploys with previews per branch.
+**Cloudflare Pages (intended frontend host):** see `docs/CLOUDFLARE.md` for the exact
+one-step setup — connect the repo, root directory `frontend`, build `npm run build`,
+output `dist`; `public/_redirects` already provides the SPA fallback.
+
+**Render (intended backend host):** deploy `backend/` (gunicorn) plus a Celery worker,
+pointing `DATABASE_URL` at Supabase and `REDIS_URL` at a Valkey/Redis instance.
+
+None of these targets are deployed yet; local development uses `docker-compose.yml`.
 
 ## 🗺 Roadmap
 

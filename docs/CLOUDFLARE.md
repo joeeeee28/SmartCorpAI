@@ -42,8 +42,10 @@ The automation sandbox has no Cloudflare credentials, so project creation needs
 - [ ] Static assets load (no unstyled page / missing JS)
 - [ ] Push a commit → Pages rebuilds automatically
 
-## Alternative (also one click)
+## Note on GitHub Pages
 
-GitHub → repository **Settings → Pages → Source: GitHub Actions** enables the included
-`deploy-pages.yml` workflow → `https://joeeeee28.github.io/SmartCorpAI/`.
-Both can stay configured; Cloudflare remains the preferred URL.
+GitHub Pages is **intentionally unused** for this project. The former
+`deploy-pages.yml` workflow has been removed; GitHub Actions now runs CI only
+(`.github/workflows/ci.yml` — backend tests + frontend production build).
+Cloudflare Pages is the intended frontend host, with the backend on Render
+(Django + Celery + Valkey/Redis) and PostgreSQL + pgvector on Supabase.
