@@ -1,0 +1,95 @@
+# SmartCorp AI — Continuous Integration (tests + builds ONLY, no deployment).
+#
+# Deployment targets (configured outside GitHub Actions):
+#   - Frontend  → Cloudflare Pages (docs/CLOUDFLARE.md)
+#   - Backend   → Render (Django + Celery + Valkey/Redis)
+#   - Database  → Supabase (PostgreSQL + pgvector)
+# GitHub Pages is intentionally NOT used.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — Django checks + tests (PostgreSQL + pgvector)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: smartcorp
+          POSTGRES_PASSWORD: smartcorp
+          POSTGRES_DB: smartcorp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartcorp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://smartcorp:smartcorp@127.0.0.1:5432/smartcorp
+      SECRET_KEY: ci-only-secret-key
+      DEBUG: "False"
+      CELERY_EAGER: "True"
+      ALLOWED_HOSTS: localhost,127.0.0.1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django system check
+        run: python manage.py check
+
+      - name: Migrations are up to date
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run test suite
+        run: python manage.py test --noinput
+
+  frontend:
+    name: Frontend — typecheck + production build (real API mode)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production build (tsc --noEmit + vite build)
+        run: npm run build
+        env:
+          VITE_USE_MOCK: "false"
+          VITE_API_URL: /api
