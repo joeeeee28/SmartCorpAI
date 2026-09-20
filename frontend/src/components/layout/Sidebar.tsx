@@ -74,13 +74,12 @@ function NavItem({ item, onNavigate }: { item: Item; onNavigate?: () => void }) 
       onClick={onNavigate}
       className={clsx(
         'group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition',
-        isOn ? 'bg-white/10 text-white' : 'text-slate-300/80 hover:bg-white/5 hover:text-white',
+        isOn ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/50' : 'text-slate-300/80 hover:bg-white/5 hover:text-white',
       )}
     >
-      <item.icon className={clsx('h-[17px] w-[17px] shrink-0', isOn ? 'text-indigo-300' : 'text-slate-400 group-hover:text-slate-200')} />
+      <item.icon className={clsx('h-[17px] w-[17px] shrink-0', isOn ? 'text-white' : 'text-slate-400 group-hover:text-slate-200')} />
       <span className="flex-1 truncate">{item.label}</span>
-      {item.badge && <span className="rounded-full bg-indigo-500/80 px-1.5 py-0.5 text-[10px] font-bold text-white">{item.badge}</span>}
-      {isOn && <span className="absolute left-0 h-5 w-[3px] rounded-r bg-indigo-400" />}
+      {item.badge && <span className={clsx('rounded-full px-1.5 py-0.5 text-[10px] font-bold', isOn ? 'bg-white/20 text-white' : 'bg-indigo-500/80 text-white')}>{item.badge}</span>}
     </NavLink>
   );
 }

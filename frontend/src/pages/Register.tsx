@@ -16,7 +16,7 @@ export function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      await register(form.name || 'New User', form.email, form.password);
+      await register(form.name || 'New User', form.email, form.password, form.org || undefined);
       toast({ kind: 'success', title: 'Workspace created', body: `${form.org || 'Your organization'} is ready.` });
       navigate('/dashboard');
     } finally {

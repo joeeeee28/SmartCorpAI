@@ -23,8 +23,8 @@ export function Login() {
       await login(email, password);
       toast({ kind: 'success', title: 'Welcome back', body: 'Signed in to SmartCorp AI.' });
       navigate('/dashboard');
-    } catch {
-      setError('Sign-in failed. Please try again.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }

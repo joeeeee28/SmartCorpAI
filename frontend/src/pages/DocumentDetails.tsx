@@ -7,7 +7,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Badge, StatusBadge } from '../components/ui/Badge';
 import { Card, CardHeader } from '../components/ui/Card';
-import { Skeleton } from '../components/ui/Feedback';
+import { Alert, Skeleton } from '../components/ui/Feedback';
 import { useToast } from '../context/ToastContext';
 
 export function DocumentDetails() {
@@ -15,10 +15,29 @@ export function DocumentDetails() {
   const { toast } = useToast();
   const [doc, setDoc] = useState<DocumentItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
 
   useEffect(() => {
     if (id) knowledgeService.getDocument(id).then((d) => { setDoc(d ?? null); setLoading(false); });
   }, [id]);
+
+  const reprocess = async () => {
+    if (!id) return;
+    setWorking(true);
+    try {
+      const updated = await knowledgeService.reprocess(id);
+      if (updated) {
+        setDoc(updated);
+        toast({ kind: updated.status === 'READY' ? 'success' : 'error', title: `Reprocess ${updated.status.toLowerCase()}`, body: updated.name });
+      } else {
+        toast({ kind: 'info', title: 'Reprocessing queued', body: doc?.name ?? '' });
+      }
+    } catch (e) {
+      toast({ kind: 'error', title: 'Reprocess failed', body: e instanceof Error ? e.message : '' });
+    } finally {
+      setWorking(false);
+    }
+  };
 
   if (loading) {
     return <div className="space-y-4"><Skeleton className="h-10 w-1/3" /><Skeleton className="h-64" /></div>;
@@ -56,11 +75,14 @@ export function DocumentDetails() {
         crumbs={[{ label: 'Knowledge', to: '/knowledge' }, { label: 'Documents', to: '/knowledge/documents' }, { label: doc.name }]}
         actions={
           <>
-            {doc.status === 'FAILED' && <Button icon={<Loader2 className="h-4 w-4" />} onClick={() => toast({ kind: 'info', title: 'Reprocessing queued', body: doc.name })}>Reprocess</Button>}
+            {doc.status === 'FAILED' && <Button loading={working} icon={<Loader2 className="h-4 w-4" />} onClick={reprocess}>Reprocess</Button>}
             <Button variant="secondary" icon={<ShieldCheck className="h-4 w-4" />} onClick={() => toast({ kind: 'info', title: 'Permissions', body: `Visible to: ${doc.permissions.join(', ')}` })}>Permissions</Button>
           </>
         }
       />
+      {doc.error_message && (
+        <div className="mb-4"><Alert kind="error" title="Processing failed" body={doc.error_message} /></div>
+      )}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader title="Document details" />

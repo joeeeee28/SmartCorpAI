@@ -75,6 +75,7 @@ export interface DocumentItem {
   chunks: number;
   embeddingStatus: 'INDEXED' | 'INDEXING' | 'QUEUED' | 'FAILED';
   history: ProcessingEvent[];
+  error_message?: string;
 }
 
 export interface Citation {

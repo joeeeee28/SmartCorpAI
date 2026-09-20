@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, FileUp, RotateCcw } from 'lucide-react';
 import { knowledgeService } from '../services/knowledgeService';
+import { USE_MOCK } from '../services/api';
 import type { DocumentItem } from '../types';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
@@ -27,8 +28,11 @@ export function Documents() {
   const [status, setStatus] = useState('all');
   const [type, setType] = useState('all');
   const [page, setPage] = useState(1);
+  const [bases, setBases] = useState<{ id: string; name: string }[]>([]);
+  const [targetKb, setTargetKb] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -37,6 +41,7 @@ export function Documents() {
   useEffect(() => {
     setLoading(true);
     knowledgeService.listDocuments(kbFilter).then((d) => { setDocs(d); setLoading(false); setPage(1); });
+    if (!USE_MOCK) knowledgeService.listBases().then((b) => setBases(b.map((x) => ({ id: x.id, name: x.name }))));
   }, [kbFilter]);
 
   const filtered = useMemo(() => docs.filter((d) =>
@@ -49,20 +54,34 @@ export function Documents() {
 
   const upload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fileName.trim()) return;
+    const input: File | string | null = USE_MOCK ? fileName.trim() : pickedFile;
+    const kbId = kbFilter ?? (USE_MOCK ? 'kb-hr' : targetKb || bases[0]?.id || '');
+    if (!input || (typeof input === 'string' && !input)) return;
+    if (!kbId) {
+      toast({ kind: 'error', title: 'No knowledge base', body: 'Create a knowledge base first.' });
+      return;
+    }
     setUploading(true);
     setProgress(8);
     const timer = setInterval(() => setProgress((p) => Math.min(92, p + Math.random() * 18)), 220);
-    const doc = await knowledgeService.uploadDocument(fileName.trim(), kbFilter ?? 'kb-hr');
-    clearInterval(timer);
-    setProgress(100);
-    setTimeout(() => {
-      setDocs((prev) => [{ ...doc, status: 'PROCESSING', embeddingStatus: 'INDEXING', chunks: 64, pages: 12 }, ...prev]);
+    try {
+      const doc = await knowledgeService.uploadDocument(input, kbId);
+      clearInterval(timer);
+      setProgress(100);
+      setTimeout(() => {
+        // Mock mode simulates async progress; real mode returns the true final status.
+        setDocs((prev) => [USE_MOCK ? { ...doc, status: 'PROCESSING', embeddingStatus: 'INDEXING', chunks: 64, pages: 12 } : doc, ...prev]);
+        setUploading(false);
+        setUploadOpen(false);
+        setFileName('');
+        setPickedFile(null);
+        toast({ kind: 'success', title: USE_MOCK ? 'Upload started' : `Upload ${doc.status.toLowerCase()}`, body: `${doc.name} · ${doc.chunks} chunks` });
+      }, 350);
+    } catch (err) {
+      clearInterval(timer);
       setUploading(false);
-      setUploadOpen(false);
-      setFileName('');
-      toast({ kind: 'success', title: 'Upload started', body: `${doc.name} is being processed.` });
-    }, 350);
+      toast({ kind: 'error', title: 'Upload failed', body: err instanceof Error ? err.message : 'Please try again.' });
+    }
   };
 
   return (
@@ -120,9 +139,18 @@ export function Documents() {
         <form onSubmit={upload} className="space-y-4">
           <div className="rounded-xl border-2 border-dashed border-slate-200 p-6 text-center dark:border-slate-700">
             <FileUp className="mx-auto h-8 w-8 text-indigo-400" />
-            <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Drop a file here or type a filename</p>
-            <p className="text-xs text-slate-400">Demo upload — simulated pipeline</p>
-            <input className="input mt-3" value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="e.g. Travel Policy 2026.pdf" />
+            <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">{USE_MOCK ? 'Type a filename to simulate an upload' : 'Select a file to upload and process'}</p>
+            <p className="text-xs text-slate-400">{USE_MOCK ? 'Demo upload — simulated pipeline' : 'Real pipeline — extract, chunk and index for RAG'}</p>
+            {USE_MOCK ? (
+              <input className="input mt-3" value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="e.g. Travel Policy 2026.pdf" />
+            ) : (
+              <input type="file" accept=".pdf,.docx,.txt,.csv" className="input mt-3 cursor-pointer" onChange={(e) => setPickedFile(e.target.files?.[0] ?? null)} />
+            )}
+            {!USE_MOCK && !kbFilter && bases.length > 0 && (
+              <select className="input mt-2" value={targetKb || bases[0].id} onChange={(e) => setTargetKb(e.target.value)} aria-label="Knowledge base">
+                {bases.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
           </div>
           {uploading && (
             <div>

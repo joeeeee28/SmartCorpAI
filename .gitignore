@@ -25,3 +25,12 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# backend local runtime (never commit)
+/backend-venv/
+.venv/
+/.pgdata/
+backend/media/*
+!backend/media/.gitkeep
+backend/*.sqlite3
+backend/db.sqlite3

@@ -4,7 +4,7 @@ import {
   BarChart3, Bell, CheckCircle2, ChevronRight, Database, FileUp, HardDrive, Inbox,
   MessagesSquare, ScanSearch, Server, Sparkles, ClipboardList, KeyRound, FileText, Upload, UserPlus, Check,
 } from 'lucide-react';
-import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, Cell, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { dashboardService } from '../services/dashboardService';
 import type { Kpi } from '../types';
 import { MetricCard } from '../components/ui/MetricCard';
@@ -16,13 +16,20 @@ import { useAuth } from '../context/AuthContext';
 type Range = 'daily' | 'weekly' | 'monthly';
 
 const quickAccess = [
-  { label: 'Ask AI', to: '/chat', Icon: MessagesSquare, tint: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300' },
-  { label: 'Upload Document', to: '/knowledge/documents', Icon: FileUp, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' },
-  { label: 'Data Analyst', to: '/analytics', Icon: BarChart3, tint: 'bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300' },
-  { label: 'Create Task', to: '/tasks', Icon: ClipboardList, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300' },
-  { label: 'Request Access', to: '/requests', Icon: KeyRound, tint: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300' },
-  { label: 'View Reports', to: '/reports', Icon: FileText, tint: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300' },
+  { label: 'Ask AI', sub: 'Ask anything', to: '/chat', Icon: MessagesSquare, tint: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300' },
+  { label: 'Upload Document', sub: 'Add to knowledge', to: '/knowledge/documents', Icon: FileUp, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' },
+  { label: 'Data Analyst', sub: 'Analyze data', to: '/analytics', Icon: BarChart3, tint: 'bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300' },
+  { label: 'Create Task', sub: 'Assign a task', to: '/tasks', Icon: ClipboardList, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300' },
+  { label: 'Request Access', sub: 'Request permissions', to: '/requests', Icon: KeyRound, tint: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300' },
+  { label: 'View Reports', sub: 'See analytics', to: '/reports', Icon: FileText, tint: 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300' },
 ];
+
+const notifTint: Record<string, string> = {
+  approval: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
+  document: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300',
+  ai: 'bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300',
+  system: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300',
+};
 
 const activityIcon = { upload: Upload, check: Check, query: Sparkles, user: UserPlus };
 const statusIcon = [Sparkles, Database, Server, HardDrive];
@@ -100,14 +107,20 @@ export function Dashboard() {
           />
           <div className="h-[280px] px-2 py-4">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+              <AreaChart data={trend} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="queryFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Line type="monotone" dataKey="queries" name="Queries" stroke="#4f46e5" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="resolved" name="Resolved" stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
-              </LineChart>
+                <Area type="monotone" dataKey="queries" name="Queries" stroke="#4f46e5" strokeWidth={2.5} fill="url(#queryFill)" dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="resolved" name="Resolved" stroke="#10b981" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 3 }} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
@@ -115,24 +128,31 @@ export function Dashboard() {
         <Card>
           <CardHeader title="Top AI Agent Usage" subtitle="Share of queries by agent" />
           <div className="flex items-center gap-2 px-5 pt-2">
-            <div className="h-[190px] w-[170px] shrink-0">
+            <div className="relative h-[190px] w-[170px] shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={usage} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={3} strokeWidth={0}>
+                  <Pie data={usage} dataKey="value" nameKey="name" innerRadius={56} outerRadius={80} paddingAngle={3} strokeWidth={0}>
                     {usage.map((u) => <Cell key={u.name} fill={u.color} />)}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-xl font-extrabold text-slate-900 dark:text-white">{usage.reduce((s, u) => s + u.value, 0).toLocaleString()}</p>
+                <p className="text-[11px] text-slate-400">Total</p>
+              </div>
             </div>
             <div className="min-w-0 flex-1 space-y-2.5">
-              {usage.map((u) => (
-                <div key={u.name} className="flex items-center gap-2 text-[13px]">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: u.color }} />
-                  <span className="flex-1 truncate font-medium text-slate-600 dark:text-slate-300">{u.name}</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{u.value}</span>
-                </div>
-              ))}
+              {usage.map((u) => {
+                const total = usage.reduce((s, x) => s + x.value, 0) || 1;
+                return (
+                  <div key={u.name} className="flex items-center gap-2 text-[13px]">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: u.color }} />
+                    <span className="flex-1 truncate font-medium text-slate-600 dark:text-slate-300">{u.name}</span>
+                    <span className="text-right font-bold leading-tight text-slate-900 dark:text-white">{u.value.toLocaleString()}<span className="block text-[10px] font-medium text-slate-400">{Math.round((u.value / total) * 100)}%</span></span>
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="px-5 pb-4"><Badge tone="slate">Demo data — live analytics connect in Phase 1</Badge></div>
