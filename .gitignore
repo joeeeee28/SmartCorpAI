@@ -1,0 +1,36 @@
+# deps & build
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# env (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# logs & OS
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# python (Phase 1 backend)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# backend local runtime (never commit)
+/backend-venv/
+.venv/
+/.pgdata/
+backend/media/*
+!backend/media/.gitkeep
+backend/*.sqlite3
+backend/db.sqlite3
