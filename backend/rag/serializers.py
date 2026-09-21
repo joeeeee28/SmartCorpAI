@@ -11,7 +11,7 @@ class CitationSerializer(serializers.Serializer):
 class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
-        fields = ('id', 'role', 'content', 'citations', 'confidence', 'created_at')
+        fields = ('id', 'role', 'content', 'citations', 'confidence', 'feedback', 'created_at')
 
 class ConversationSerializer(serializers.ModelSerializer):
     messages = ChatMessageSerializer(many=True, read_only=True)

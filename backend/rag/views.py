@@ -48,14 +48,31 @@ class ConversationDetailView(APIView):
         content = str(request.data.get('content', '')).strip()
         if not content or len(content) > 10000: return Response({'detail': 'content is required and must be <= 10000 characters.'}, status=400)
         ChatMessage.objects.create(conversation=obj, role='user', content=content)
+        audit(request, 'CHAT_MESSAGE', str(obj.id), 'SUCCESS', 'user message received')
         chunks, semantic = search(request.user, content)
         citations = [cite(c) for c in chunks]
         context = '\n\n'.join(f'[{i+1}] {c.text}' for i, c in enumerate(chunks))
         try:
             answer = complete([{'role': 'user', 'content': content}], context)
-        except RuntimeError as exc:
-            return Response({'detail': str(exc), 'citations': citations, 'semantic_available': semantic}, status=503)
+        except Exception as exc:
+            audit(request, 'CHAT_COMPLETION', str(obj.id), 'FAILED', str(exc)[:200])
+            return Response({'detail': str(exc), 'citations': citations, 'confidence': None, 'semantic_available': semantic}, status=503)
         confidence = min(0.99, 0.35 + 0.1 * len(citations)) if citations else 0.2
         msg = ChatMessage.objects.create(conversation=obj, role='assistant', content=answer, citations=citations, confidence=confidence)
         audit(request, 'CHAT_COMPLETION', str(obj.id), 'SUCCESS', f'{len(citations)} permitted citations')
-        return Response({'message': {'id': msg.id, 'role': msg.role, 'content': msg.content, 'citations': citations, 'confidence': confidence}, 'semantic_available': semantic})
+        return Response({'message': {'id': msg.id, 'role': msg.role, 'content': msg.content, 'citations': citations, 'confidence': confidence, 'feedback': None}, 'semantic_available': semantic})
+
+class ChatFeedbackView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request, pk, message_id):
+        message = ChatMessage.objects.filter(id=message_id, conversation_id=pk, conversation__user=request.user, conversation__organization=request.user.organization).first()
+        if not message:
+            audit(request, 'CHAT_FEEDBACK', str(message_id), 'DENIED', 'conversation ownership check failed')
+            return Response({'detail': 'Not found.'}, status=404)
+        feedback = request.data.get('feedback')
+        if feedback not in ('up', 'down'):
+            return Response({'detail': 'feedback must be up or down.'}, status=400)
+        message.feedback = feedback
+        message.save(update_fields=['feedback'])
+        audit(request, 'CHAT_FEEDBACK', str(message.id), 'SUCCESS', f'feedback={feedback}')
+        return Response({'id': message.id, 'feedback': message.feedback})

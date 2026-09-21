@@ -29,6 +29,6 @@ export const chatService = {
  get: async (id: string): Promise<Conversation | undefined> => USE_MOCK ? mock(store.find((c) => c.id === id)) : mapConversation(await request<any>(`/chat/conversations/${id}/`)),
  create: async (title: string, agentId: string): Promise<Conversation> => USE_MOCK ? createMock(title, agentId) : mapConversation(await request<any>('/chat/conversations/', { method: 'POST', body: JSON.stringify({ title }) })),
  send: async (convId: string, content: string): Promise<ChatMessage> => { if (USE_MOCK) return sendMock(convId, content); const data = await request<any>(`/chat/conversations/${convId}/`, { method: 'POST', body: JSON.stringify({ content }) }); const m = data.message; return { id: String(m.id), role: 'assistant', content: m.content, at: 'now', confidence: m.confidence, citations: (m.citations ?? []).map(mapCitation), feedback: null }; },
- feedback: (convId: string, msgId: string, fb: 'up' | 'down') => { const m = store.find((c) => c.id === convId)?.messages.find((x) => x.id === msgId); if (m) m.feedback = fb; return mock(m, 150); },
+ feedback: async (convId: string, msgId: string, fb: 'up' | 'down') => { if (!USE_MOCK) return request<any>(`/chat/conversations/${convId}/messages/${msgId}/feedback/`, { method: 'POST', body: JSON.stringify({ feedback: fb }) }); const m = store.find((c) => c.id === convId)?.messages.find((x) => x.id === msgId); if (m) m.feedback = fb; return mock(m, 150); },
 };
 export { agentService, routeQuery };

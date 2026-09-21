@@ -55,8 +55,9 @@ class KnowledgeApiTests(APITestCase):
         self.assertEqual(DocumentChunk.objects.filter(document=doc).count(), doc.chunk_count)
         first = DocumentChunk.objects.filter(document=doc).order_by('chunk_index').first()
         self.assertIn('Annual leave policy', first.text)
-        self.assertIsNone(first.embedding)  # embeddings honestly deferred to Phase 2
-        self.assertEqual(doc.embedding_status, 'QUEUED')
+        self.assertIsNotNone(first.embedding)
+        self.assertEqual(len(first.embedding), 1536)
+        self.assertEqual(doc.embedding_status, 'INDEXED')
 
         # audit trail written
         actions = set(AuditLog.objects.filter(organization=self.org).values_list('action', flat=True))

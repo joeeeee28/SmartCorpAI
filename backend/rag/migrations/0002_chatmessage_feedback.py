@@ -1,0 +1,5 @@
+from django.db import migrations, models
+
+class Migration(migrations.Migration):
+    dependencies = [('rag', '0001_initial')]
+    operations = [migrations.AddField(model_name='chatmessage', name='feedback', field=models.CharField(blank=True, choices=[('up', 'Up'), ('down', 'Down')], max_length=8, null=True))]

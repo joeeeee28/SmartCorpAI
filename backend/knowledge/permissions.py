@@ -30,6 +30,8 @@ def can_access_document(user, doc) -> bool:
         return False
     if is_admin(user):
         return True
+    if doc.department_id is not None and doc.department_id != user.department_id:
+        return False
     allowed = doc.roles_allowed or []
     if allowed and role_name(user) not in allowed:
         return False

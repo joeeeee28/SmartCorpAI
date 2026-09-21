@@ -133,6 +133,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50 MB
 
 # Phase 2+ hooks (RAG/LLM). Empty until wired.
 LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
+EMBEDDING_PROVIDER = os.environ.get('EMBEDDING_PROVIDER', 'local')
 EMBEDDING_API_KEY = os.environ.get('EMBEDDING_API_KEY', '')
 EMBEDDING_MODEL = os.environ.get('EMBEDDING_MODEL', 'text-embedding-3-small')
 EMBEDDING_DIMENSIONS = 1536

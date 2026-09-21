@@ -148,9 +148,11 @@ See `frontend/.env.example`. Key knobs:
 | `VITE_USE_MOCK`  | `true`                     | `false` = services call the real API       |
 | `VITE_BASE`          | `/`                        | sub-path hosting base (e.g. `/SmartCorpAI/`) |
 
-Backend AI variables: `EMBEDDING_API_KEY` enables OpenAI `text-embedding-3-small` indexing,
-`EMBEDDING_MODEL` selects the embedding model, and `LLM_API_KEY` plus `LLM_MODEL` enable grounded
-chat completions. All are optional; keyword retrieval remains available without them.
+Backend AI variables: `EMBEDDING_PROVIDER=local` enables deterministic, free 1536-dimensional
+embeddings for development/tests. Set `EMBEDDING_PROVIDER=openai` with `EMBEDDING_API_KEY` to use
+OpenAI-compatible production embeddings. `EMBEDDING_MODEL` selects the model, and `LLM_API_KEY`
+plus `LLM_MODEL` enable grounded chat completions. Without an LLM key, RAG returns `answer: null`
+and `confidence: null` with retrieval evidence; it never fabricates an answer.
 
 ## 🐳 Docker
 
@@ -182,6 +184,10 @@ Implemented REST surface (DRF, JWT, org-scoped). Auth: `Authorization: Bearer <a
 | GET/POST/DELETE | `/api/documents/` | Multipart upload → real pipeline; role-filtered |
 | POST | `/api/documents/{id}/process/` | Reprocess (uploader or Admin) |
 | GET | `/api/audit-logs/` | Org audit trail (Admin) |
+| POST | `/api/rag/search/` | Permission-aware hybrid retrieval with citations |
+| GET/POST | `/api/chat/conversations/` | User-owned conversations |
+| GET/POST | `/api/chat/conversations/{id}/` | Conversation messages and grounded chat |
+| POST | `/api/chat/conversations/{id}/messages/{message_id}/feedback/` | Persist answer feedback |
 
 Planned next (chat/RAG/agents/decisions/approvals):
 
@@ -192,13 +198,27 @@ Planned next (chat/RAG/agents/decisions/approvals):
 /api/tasks/  /api/evaluations/  /api/analytics/  /api/audit-logs/
 ```
 
-## 🧠 RAG architecture (target)
+## 🧠 RAG architecture
 
 ```
-Question → normalize → semantic + keyword search → merge → rerank
-       → PERMISSION FILTER (before the LLM) → context → LLM
-       → answer + citations + confidence → audit log
+Document → extract/chunk → Celery embeddings → PostgreSQL + pgvector
+Question → permission-constrained candidates → semantic + keyword search
+         → deterministic merge/rerank → authorized context → optional LLM
+         → answer + citations + confidence → audit log
 ```
+
+Embeddings use 1536 dimensions. `EMBEDDING_PROVIDER=local` provides deterministic,
+provider-independent development/test vectors; `EMBEDDING_PROVIDER=openai` uses the configured
+OpenAI-compatible provider. Documents transition through `QUEUED → INDEXING → INDEXED` or
+`FAILED`. Batch validation prevents a document being marked indexed with missing vectors.
+
+The same retrieval service is used by `/api/rag/search/` and Chat. Permission constraints are
+applied to the database candidate queryset before semantic retrieval, keyword retrieval, merging,
+reranking, or LLM context construction. The reranker is deterministic and explainable: lexical
+term matches dominate, then cosine similarity, with document chunk ID as a stable tie-breaker.
+
+Without `LLM_API_KEY`, retrieval still returns permitted evidence but returns `answer: null` and
+`confidence: null`; the backend never fabricates generated answers.
 
 One shared index and router serve all three agents; agents differ only in instructions, tools
 and allowed knowledge bases. Frontend already models this (`routeQuery()` in
