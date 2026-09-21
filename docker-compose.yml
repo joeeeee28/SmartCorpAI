@@ -31,7 +31,7 @@ services:
       DATABASE_URL: postgres://smartcorp:smartcorp@postgres:5432/smartcorp
       REDIS_URL: redis://redis:6379/0
       CELERY_EAGER: "False"
-      ALLOWED_HOSTS: localhost,backend
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend,.app.github.dev
       CORS_ALLOWED_ORIGINS: http://localhost:8080
     depends_on:
       postgres: { condition: service_healthy }
@@ -50,7 +50,7 @@ services:
       DATABASE_URL: postgres://smartcorp:smartcorp@postgres:5432/smartcorp
       REDIS_URL: redis://redis:6379/0
       CELERY_EAGER: "False"
-      ALLOWED_HOSTS: localhost,backend
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend,.app.github.dev
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -62,7 +62,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://localhost:8000/api
+        VITE_API_URL: /api
         VITE_USE_MOCK: "false"
     depends_on:
       - backend
