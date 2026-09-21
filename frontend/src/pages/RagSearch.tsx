@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileSearch, ScanSearch, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { routeQuery } from '../services/agentService';
+import { ragService } from '../services/ragService';
+import { USE_MOCK } from '../services/api';
 import { citations, ragAnswer } from '../mock/chat';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
@@ -42,7 +44,8 @@ export function RagSearch() {
     setLoading(true);
     setFb(null);
     setResult(null);
-    setTimeout(() => { setResult(search(q)); setLoading(false); }, 950);
+    if (USE_MOCK) setTimeout(() => { setResult(search(q)); setLoading(false); }, 950);
+    else ragService.search(q).then((data) => setResult({ answer: data.answer ?? 'No generated answer: the LLM provider is not configured.', confidence: data.confidence ?? 0, cites: data.cites as typeof citations, route: { intent: 'retrieval', agent: 'Permission-aware search', latencyMs: 0, chunks: data.chunks, filtered: 0 } })).catch(() => setResult(null)).finally(() => setLoading(false));
   };
 
   useEffect(() => {

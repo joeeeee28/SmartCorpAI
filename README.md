@@ -4,10 +4,11 @@
 permission-aware RAG, AI search, AI chat, specialized agents with routing, a decision center with
 human-in-the-loop approvals, AI evaluation, RBAC, audit logs, analytics and meeting intelligence.
 
-> **Phase 1 (current):** Django backend live — JWT auth, organizations, RBAC, Knowledge Hub with
-> real upload → extract → chunk pipeline on PostgreSQL + pgvector. The frontend runs in
-> **mock mode** (`VITE_USE_MOCK=true`, default) or **real mode** (`VITE_USE_MOCK=false`)
-> against the API with zero UI redesign: `MOCK SERVICE → REAL DJANGO API`.
+> **Phase 2 (in progress):** Django backend live — JWT auth, organizations, RBAC, Knowledge Hub,
+> permission-first keyword RAG, conversation persistence, and optional OpenAI embeddings/LLM. The
+> frontend runs in **mock mode** (`VITE_USE_MOCK=true`, default) or **real mode** (`VITE_USE_MOCK=false`)
+> against the API with zero UI redesign: `MOCK SERVICE → REAL DJANGO API`. Generated answers are
+> never fabricated: without `LLM_API_KEY`, chat returns an explicit provider-not-configured response.
 
 ---
 
@@ -145,7 +146,11 @@ See `frontend/.env.example`. Key knobs:
 |------------------|----------------------------|--------------------------------------------|
 | `VITE_API_URL`   | `http://localhost:8000/api`| Django API base (Phase 1)                 |
 | `VITE_USE_MOCK`  | `true`                     | `false` = services call the real API       |
-| `VITE_BASE`      | `/`                        | sub-path hosting base (e.g. `/SmartCorpAI/`) |
+| `VITE_BASE`          | `/`                        | sub-path hosting base (e.g. `/SmartCorpAI/`) |
+
+Backend AI variables: `EMBEDDING_API_KEY` enables OpenAI `text-embedding-3-small` indexing,
+`EMBEDDING_MODEL` selects the embedding model, and `LLM_API_KEY` plus `LLM_MODEL` enable grounded
+chat completions. All are optional; keyword retrieval remains available without them.
 
 ## 🐳 Docker
 

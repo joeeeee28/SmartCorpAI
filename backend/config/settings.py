@@ -136,3 +136,4 @@ LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
 EMBEDDING_API_KEY = os.environ.get('EMBEDDING_API_KEY', '')
 EMBEDDING_MODEL = os.environ.get('EMBEDDING_MODEL', 'text-embedding-3-small')
 EMBEDDING_DIMENSIONS = 1536
+LLM_MODEL = os.environ.get('LLM_MODEL', 'gpt-4o-mini')
