@@ -1,0 +1,15 @@
+// SmartCorp AI — GitHub Codespaces (development only).
+//
+// No "image" override: Codespaces' default Universal dev container is used —
+// it already ships Docker Engine + Compose, Python, and Node.js, which is all
+// this repo needs (docker compose up --build for the full stack, or Vite/Django
+// directly for frontend-only work). No Docker-in-Docker feature required.
+{
+  "name": "SmartCorp AI",
+  "forwardPorts": [8080, 8000, 5173],
+  "portsAttributes": {
+    "8080": { "label": "Frontend (docker compose / nginx)", "protocol": "http" },
+    "8000": { "label": "Django REST API", "protocol": "http" },
+    "5173": { "label": "Vite dev server", "protocol": "http" }
+  }
+}
